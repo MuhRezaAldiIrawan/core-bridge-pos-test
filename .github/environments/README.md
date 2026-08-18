@@ -53,7 +53,7 @@ cat ~/.ssh/github_actions.pub | ssh deploy@staging-server "mkdir -p ~/.ssh && ca
 ### 3. Add private key to GitHub Secrets
 
 ```bash
-# View private key content
+# View private key content -s
 cat ~/.ssh/github_actions
 ```
 
