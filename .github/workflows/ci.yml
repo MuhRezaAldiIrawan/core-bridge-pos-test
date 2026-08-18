@@ -26,8 +26,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run Prisma validate
-        run: npx prisma validate
+      - name: Run Prisma format check
+        run: npx prisma format --check
 
       - name: Run Lint
         run: npm run lint
