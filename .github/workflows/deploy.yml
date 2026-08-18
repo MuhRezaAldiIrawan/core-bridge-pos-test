@@ -68,7 +68,6 @@ jobs:
           name: build-${{ github.ref_name }}
           path: |
             dist/
-            node_modules/
             package.json
             package-lock.json
             prisma/
@@ -101,15 +100,18 @@ jobs:
           sudo rm -rf /App/core-bridge-pos-test/dist
           sudo cp -r /tmp/build/dist /App/core-bridge-pos-test/
           sudo cp /tmp/build/package*.json /App/core-bridge-pos-test/
-          sudo cp -r /tmp/build/node_modules /App/core-bridge-pos-test/
           sudo cp -r /tmp/build/prisma /App/core-bridge-pos-test/
 
+          # Install dependencies (exclude devDependencies for production)
+          echo "Installing dependencies..."
+          cd /App/core-bridge-pos-test
+          npm ci --omit=dev
+
           # Set permissions
-          sudo chown -R www-data:www-data /opt/core-bridge-pos
+          sudo chown -R www-data:www-data /App/core-bridge-pos-test
 
           # Run migrations
           echo "Running database migrations..."
-          cd /opt/core-bridge-pos
           DATABASE_URL="${{ secrets.STAGING_DATABASE_URL }}" npx prisma migrate deploy
 
           # Restart Supervisor
