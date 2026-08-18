@@ -50,10 +50,8 @@ describe('ApplicationController', () => {
         allowedIps: ['127.0.0.1'],
       };
 
-      const createMock = applicationService.create.bind(
-        applicationService,
-      ) as jest.MockedFunction<ApplicationService['create']>;
-      createMock.mockResolvedValue(createdApplication);
+      // Use the mock directly - applicationService.create is already a jest mock
+      applicationService.create.mockResolvedValue(createdApplication);
 
       const dto: CreateApplicationDto = {
         code: 'WRP001',
@@ -75,7 +73,7 @@ describe('ApplicationController', () => {
         isActive: mockApplication.isActive,
         createdAt: mockApplication.createdAt,
       });
-      expect(createMock).toHaveBeenCalledWith(dto);
+      expect(applicationService.create).toHaveBeenCalledWith(dto);
     });
 
     it('should create an application successfully using readonly mock data', async () => {
@@ -94,10 +92,8 @@ describe('ApplicationController', () => {
         updatedAt: new Date(),
       };
 
-      const createMock = applicationService.create.bind(
-        applicationService,
-      ) as jest.MockedFunction<ApplicationService['create']>;
-      createMock.mockResolvedValue(mockCreatedApplication);
+      // Use the mock directly
+      applicationService.create.mockResolvedValue(mockCreatedApplication);
       const dto: CreateApplicationDto = {
         code: 'WRP002',
         name: 'Wristpay Processor 2',

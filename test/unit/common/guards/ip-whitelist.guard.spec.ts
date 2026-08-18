@@ -29,8 +29,12 @@ describe('IpWhitelistGuard', () => {
     application: any,
     ip: string,
     forwardedFor?: string,
-  ) =>
-    ({
+  ) => {
+    // Create mock handler and class for reflector
+    const mockHandler = jest.fn();
+    const mockClass = jest.fn();
+
+    return {
       switchToHttp: () => ({
         getRequest: () => ({
           ip,
@@ -39,7 +43,10 @@ describe('IpWhitelistGuard', () => {
           application,
         }),
       }),
-    }) as ExecutionContext;
+      getHandler: () => mockHandler,
+      getClass: () => mockClass,
+    } as unknown as ExecutionContext;
+  };
 
   describe('canActivate', () => {
     it('should allow request when IP is in whitelist', () => {

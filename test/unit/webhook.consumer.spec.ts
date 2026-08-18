@@ -195,6 +195,9 @@ describe('WebhookConsumer', () => {
 
   describe('onModuleInit', () => {
     it('should wait for RabbitMQ (no auto consumer start)', async () => {
+      // Mock application.findMany to return empty array so no consumers start
+      prismaService.application.findMany.mockResolvedValue([]);
+
       await consumer.onModuleInit();
 
       expect(amqpService.isReady).toHaveBeenCalled();
