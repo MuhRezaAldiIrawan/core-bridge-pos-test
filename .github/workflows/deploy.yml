@@ -99,11 +99,11 @@ jobs:
 
             # Copy new build
             echo "Copying new build..."
-            sudo rm -rf /opt/core-bridge-pos/dist
-            sudo cp -r /tmp/build/dist /opt/core-bridge-pos/
-            sudo cp /tmp/build/package*.json /opt/core-bridge-pos/
-            sudo cp -r /tmp/build/node_modules /opt/core-bridge-pos/
-            sudo cp -r /tmp/build/prisma /opt/core-bridge-pos/
+            sudo rm -rf /App/core-bridge-pos/dist
+            sudo cp -r /tmp/build/dist /App/core-bridge-pos/
+            sudo cp /tmp/build/package*.json /App/core-bridge-pos/
+            sudo cp -r /tmp/build/node_modules /App/core-bridge-pos/
+            sudo cp -r /tmp/build/prisma /App/core-bridge-pos/
 
             # Set permissions
             sudo chown -R www-data:www-data /opt/core-bridge-pos
@@ -158,11 +158,11 @@ jobs:
 
             # Copy new build
             echo "Copying new build..."
-            sudo rm -rf /opt/core-bridge-pos/dist
-            sudo cp -r /tmp/build/dist /opt/core-bridge-pos/
-            sudo cp /tmp/build/package*.json /opt/core-bridge-pos/
-            sudo cp -r /tmp/build/node_modules /opt/core-bridge-pos/
-            sudo cp -r /tmp/build/prisma /opt/core-bridge-pos/
+            sudo rm -rf /App/core-bridge-pos/dist
+            sudo cp -r /tmp/build/dist /App/core-bridge-pos/
+            sudo cp /tmp/build/package*.json /App/core-bridge-pos/
+            sudo cp -r /tmp/build/node_modules /App/core-bridge-pos/
+            sudo cp -r /tmp/build/prisma /App/core-bridge-pos/
 
             # Set permissions
             sudo chown -R www-data:www-data /opt/core-bridge-pos
