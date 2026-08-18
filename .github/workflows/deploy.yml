@@ -76,7 +76,7 @@ jobs:
 
   deploy-staging:
     name: Deploy to Staging
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     needs: build
     if: github.ref_name == 'develop'
     environment: staging
@@ -89,49 +89,43 @@ jobs:
           path: /tmp/build
 
       - name: Deploy to Staging Server
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.STAGING_HOST }}
-          username: ${{ secrets.STAGING_USER }}
-          key: ${{ secrets.STAGING_SSH_KEY }}
-          port: ${{ secrets.STAGING_SSH_PORT || '22' }}
-          script: |
-            set -e
+        run: |
+          set -e
 
-            # Stop Supervisor
-            echo "Stopping application..."
-            supervisorctl stop core-bridge-pos || true
+          # Stop Supervisor
+          echo "Stopping application..."
+          supervisorctl stop core-bridge-pos || true
 
-            # Copy new build
-            echo "Copying new build..."
-            sudo rm -rf /App/core-bridge-pos-test/dist
-            sudo cp -r /tmp/build/dist /App/core-bridge-pos-test/
-            sudo cp /tmp/build/package*.json /App/core-bridge-pos-test/
-            sudo cp -r /tmp/build/node_modules /App/core-bridge-pos-test/
-            sudo cp -r /tmp/build/prisma /App/core-bridge-pos-test/
+          # Copy new build
+          echo "Copying new build..."
+          sudo rm -rf /App/core-bridge-pos-test/dist
+          sudo cp -r /tmp/build/dist /App/core-bridge-pos-test/
+          sudo cp /tmp/build/package*.json /App/core-bridge-pos-test/
+          sudo cp -r /tmp/build/node_modules /App/core-bridge-pos-test/
+          sudo cp -r /tmp/build/prisma /App/core-bridge-pos-test/
 
-            # Set permissions
-            sudo chown -R www-data:www-data /opt/core-bridge-pos
+          # Set permissions
+          sudo chown -R www-data:www-data /opt/core-bridge-pos
 
-            # Run migrations
-            echo "Running database migrations..."
-            cd /opt/core-bridge-pos
-            DATABASE_URL="${{ secrets.STAGING_DATABASE_URL }}" npx prisma migrate deploy
+          # Run migrations
+          echo "Running database migrations..."
+          cd /opt/core-bridge-pos
+          DATABASE_URL="${{ secrets.STAGING_DATABASE_URL }}" npx prisma migrate deploy
 
-            # Restart Supervisor
-            echo "Restarting application..."
-            supervisorctl reread
-            supervisorctl update
-            supervisorctl start core-bridge-pos
+          # Restart Supervisor
+          echo "Restarting application..."
+          supervisorctl reread
+          supervisorctl update
+          supervisorctl start core-bridge-pos
 
-            # Health check
-            sleep 5
-            if curl -sf http://localhost:3000/health > /dev/null; then
-              echo "✅ Deployment to STAGING successful!"
-            else
-              echo "❌ Health check failed!"
-              exit 1
-            fi
+          # Health check
+          sleep 5
+          if curl -sf http://localhost:3000/health > /dev/null; then
+            echo "✅ Deployment to STAGING successful!"
+          else
+            echo "❌ Health check failed!"
+            exit 1
+          fi
 
   deploy-production:
     name: Deploy to Production
