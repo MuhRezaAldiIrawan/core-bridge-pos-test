@@ -1,0 +1,188 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - develop   # Deploy to staging
+      - main      # Deploy to production
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  build:
+    name: Build & Migrate
+    runs-on: ubuntu-latest
+
+    outputs:
+      branch: ${{ steps.vars.outputs.branch }}
+      deploy_env: ${{ steps.vars.outputs.deploy_env }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Prisma validate
+        run: npx prisma validate
+
+      - name: Prisma generate
+        run: npx prisma generate
+
+      - name: Run Lint
+        run: npm run lint
+
+      - name: Run Unit Tests
+        run: npm test
+
+      - name: Run Build
+        run: npm run build
+
+      - name: Set environment variables
+        id: vars
+        run: |
+          if [ "${{ github.ref_name }}" == "main" ]; then
+            echo "branch=main" >> $GITHUB_OUTPUT
+            echo "deploy_env=production" >> $GITHUB_OUTPUT
+          else
+            echo "branch=develop" >> $GITHUB_OUTPUT
+            echo "deploy_env=staging" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-${{ github.ref_name }}
+          path: |
+            dist/
+            node_modules/
+            package.json
+            package-lock.json
+            prisma/
+          retention-days: 1
+
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref_name == 'develop'
+    environment: staging
+
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-develop
+          path: /tmp/build
+
+      - name: Deploy to Staging Server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.STAGING_HOST }}
+          username: ${{ secrets.STAGING_USER }}
+          key: ${{ secrets.STAGING_SSH_KEY }}
+          port: ${{ secrets.STAGING_SSH_PORT || '22' }}
+          script: |
+            set -e
+
+            # Stop Supervisor
+            echo "Stopping application..."
+            supervisorctl stop core-bridge-pos || true
+
+            # Copy new build
+            echo "Copying new build..."
+            sudo rm -rf /opt/core-bridge-pos/dist
+            sudo cp -r /tmp/build/dist /opt/core-bridge-pos/
+            sudo cp /tmp/build/package*.json /opt/core-bridge-pos/
+            sudo cp -r /tmp/build/node_modules /opt/core-bridge-pos/
+            sudo cp -r /tmp/build/prisma /opt/core-bridge-pos/
+
+            # Set permissions
+            sudo chown -R www-data:www-data /opt/core-bridge-pos
+
+            # Run migrations
+            echo "Running database migrations..."
+            cd /opt/core-bridge-pos
+            DATABASE_URL="${{ secrets.STAGING_DATABASE_URL }}" npx prisma migrate deploy
+
+            # Restart Supervisor
+            echo "Restarting application..."
+            supervisorctl reread
+            supervisorctl update
+            supervisorctl start core-bridge-pos
+
+            # Health check
+            sleep 5
+            if curl -sf http://localhost:3000/health > /dev/null; then
+              echo "✅ Deployment to STAGING successful!"
+            else
+              echo "❌ Health check failed!"
+              exit 1
+            fi
+
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref_name == 'main'
+    environment: production
+
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-main
+          path: /tmp/build
+
+      - name: Deploy to Production Server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.PRODUCTION_HOST }}
+          username: ${{ secrets.PRODUCTION_USER }}
+          key: ${{ secrets.PRODUCTION_SSH_KEY }}
+          port: ${{ secrets.PRODUCTION_SSH_PORT || '22' }}
+          script: |
+            set -e
+
+            # Stop Supervisor
+            echo "Stopping application..."
+            supervisorctl stop core-bridge-pos || true
+
+            # Copy new build
+            echo "Copying new build..."
+            sudo rm -rf /opt/core-bridge-pos/dist
+            sudo cp -r /tmp/build/dist /opt/core-bridge-pos/
+            sudo cp /tmp/build/package*.json /opt/core-bridge-pos/
+            sudo cp -r /tmp/build/node_modules /opt/core-bridge-pos/
+            sudo cp -r /tmp/build/prisma /opt/core-bridge-pos/
+
+            # Set permissions
+            sudo chown -R www-data:www-data /opt/core-bridge-pos
+
+            # Run migrations
+            echo "Running database migrations..."
+            cd /opt/core-bridge-pos
+            DATABASE_URL="${{ secrets.PRODUCTION_DATABASE_URL }}" npx prisma migrate deploy
+
+            # Restart Supervisor
+            echo "Restarting application..."
+            supervisorctl reread
+            supervisorctl update
+            supervisorctl start core-bridge-pos
+
+            # Health check
+            sleep 5
+            if curl -sf http://localhost:3000/health > /dev/null; then
+              echo "✅ Deployment to PRODUCTION successful!"
+            else
+              echo "❌ Health check failed!"
+              exit 1
+            fi
