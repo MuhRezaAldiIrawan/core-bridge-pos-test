@@ -32,7 +32,12 @@ jobs:
         run: npm ci
 
       - name: Prisma validate
-        run: npx prisma validate
+        run: |
+          if [ "${{ github.ref_name }}" == "main" ]; then
+            DATABASE_URL="${{ secrets.PRODUCTION_DATABASE_URL }}" npx prisma validate
+          else
+            DATABASE_URL="${{ secrets.STAGING_DATABASE_URL }}" npx prisma validate
+          fi
 
       - name: Prisma generate
         run: npx prisma generate
