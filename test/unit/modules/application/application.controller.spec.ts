@@ -73,6 +73,7 @@ describe('ApplicationController', () => {
         isActive: mockApplication.isActive,
         createdAt: mockApplication.createdAt,
       });
+      // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(applicationService.create).toHaveBeenCalledWith(dto);
     });
 
